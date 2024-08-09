@@ -40,6 +40,15 @@ class S3Connection(AWSConnection):
         
         return self.__s3_instance
 
+    def get_s3_instance(self) -> boto3.client:
+        """
+        Returns the current S3 client instance.
+
+        :return: A boto3 S3 client instance if initialized; otherwise, raises an assertion error.
+        """
+        assert self.__s3_instance, "S3 connection not established. Please use s3_connect(bucket_name)."
+        return self.__s3_instance
+
     def create_s3bucket(self, bucket_name: str) -> boto3.client:
         """
         Creates an S3 bucket using the provided bucket name. If the bucket already exists, it notifies the user.
@@ -115,6 +124,18 @@ class S3Connection(AWSConnection):
 
         return response
 
+    def delete_bucket_cors(self):
+        """
+        Deletes the CORS configuration from the connected S3 bucket.
+        """
+        assert self.__s3_instance and self._bucket_name, "S3 connection not established. Please use s3_connect(bucket_name)."
+        try:
+            self.__s3_instance.delete_bucket_cors(Bucket=self._bucket_name)
+        except self.__s3_instance.exceptions.ClientError as e:
+            console_print(msg=f"An error occurred: {e}", color="error")
+            raise
+        return self.__s3_instance
+
     def set_bucket_policy(self, bucket_policy: Optional[Union[str, Dict]] = None):
         """
         Sets or updates the bucket policy for the connected S3 bucket.
@@ -166,54 +187,6 @@ class S3Connection(AWSConnection):
             console_print(msg=f"An error occurred: {e}", color="error")
             raise
         return self.__s3_instance
-
-    def delete_bucket_cors(self):
-        """
-        Deletes the CORS configuration from the connected S3 bucket.
-        """
-        assert self.__s3_instance and self._bucket_name, "S3 connection not established. Please use s3_connect(bucket_name)."
-        try:
-            self.__s3_instance.delete_bucket_cors(Bucket=self._bucket_name)
-        except self.__s3_instance.exceptions.ClientError as e:
-            console_print(msg=f"An error occurred: {e}", color="error")
-            raise
-        return self.__s3_instance
-
-    def get_s3_instance(self) -> boto3.client:
-        """
-        Returns the current S3 client instance.
-
-        :return: A boto3 S3 client instance if initialized; otherwise, raises an assertion error.
-        """
-        assert self.__s3_instance, "S3 connection not established. Please use s3_connect(bucket_name)."
-        return self.__s3_instance
-
-    def get_s3_bucket_objects(self, only_objects: bool = False, only_keys: bool = False) -> Union[List[Dict], List[str], Dict]:
-        """
-        Lists objects in the connected S3 bucket.
-
-        :param only_objects: If True, returns a list of object metadata (excluding keys).
-        :param only_keys: If True, returns a list of object keys.
-        :return: A list of object metadata, keys, or the full response based on the parameters.
-        """
-        assert self.__s3_instance and self._bucket_name, "S3 connection not established. Please use s3_connect(bucket_name)."
-
-        # Fetch the list of objects
-        response = self.__s3_instance.list_objects_v2(Bucket=self._bucket_name)
-
-        # Handle case where there are no objects
-        if 'Contents' not in response:
-            return []
-
-        # Return only objects or only keys based on parameters
-        if only_objects:
-            return [obj for obj in response['Contents']]
-        
-        if only_keys:
-            return [obj['Key'] for obj in response['Contents']]
-        
-        # Return full response if neither only_objects nor only_keys is specified
-        return response
 
     def list_user_policies(self, UserName: str) -> Dict:
         """
@@ -302,3 +275,30 @@ class S3Connection(AWSConnection):
             console_print(msg=f"An error occurred: {e}", color="error")
             raise
         return 
+    
+    def get_s3_bucket_objects(self, only_objects: bool = False, only_keys: bool = False) -> Union[List[Dict], List[str], Dict]:
+        """
+        Lists objects in the connected S3 bucket.
+
+        :param only_objects: If True, returns a list of object metadata (excluding keys).
+        :param only_keys: If True, returns a list of object keys.
+        :return: A list of object metadata, keys, or the full response based on the parameters.
+        """
+        assert self.__s3_instance and self._bucket_name, "S3 connection not established. Please use s3_connect(bucket_name)."
+
+        # Fetch the list of objects
+        response = self.__s3_instance.list_objects_v2(Bucket=self._bucket_name)
+
+        # Handle case where there are no objects
+        if 'Contents' not in response:
+            return []
+
+        # Return only objects or only keys based on parameters
+        if only_objects:
+            return [obj for obj in response['Contents']]
+        
+        if only_keys:
+            return [obj['Key'] for obj in response['Contents']]
+        
+        # Return full response if neither only_objects nor only_keys is specified
+        return response
