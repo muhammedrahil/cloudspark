@@ -25,7 +25,7 @@ setup(
     long_description=long_description,
     url="https://github.com/muhammedrahil/cloudspark",
     long_description_content_type="text/markdown",
-    packages=find_packages(),
+    packages=find_packages(where="app"),
     install_requires=['boto3 >= 1.34.157'],
     keywords=['python', 'aws', 's3', 'lambda', 'presigned urls', 'file uploads'],
     license="MIT",
