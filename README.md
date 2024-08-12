@@ -137,7 +137,7 @@ Generate a presigned URL for creating an object
 
 ```python
 responce = s3_conn.presigned_create_url(
-    object_name='my-object',
+    object_name='object_name',
     params={'key': 'value'},
     fields={'field': 'value'},
     conditions=[{'condition': 'value'}],
@@ -158,5 +158,52 @@ responce = s3_conn.presigned_create_url(
 Generate a presigned URL for accessing an object
 
 ```python
-responce = s3_conn.presigned_get_url(object_name='my-object', expiration=3600)
+responce = s3_conn.presigned_get_url(object_name='object_name', expiration=3600)
 ```
+
+#### Uploads a file to the connected S3 bucket.
+
+```python
+responce = s3_conn.upload_object(file=file, key_name="object_name")
+
+# example:
+with open('file_name',"rb") as file_obj:
+    s3_conn.upload_object(file=file_obj, key_name="object_name")
+```
+`file`: Bytes of the file to upload
+
+`key_name`: S3 object name (e.g., 'folder/filename.txt').
+
+#### Retrieves an object from the connected S3 bucket.
+
+return: The object metadata
+
+```python
+key_object = s3_conn.get_object(key_name="object_name")
+
+```
+
+#### Deletes an object from the connected S3 bucket
+
+```python
+key_object = s3_conn.delete_object(key_name="object_name")
+
+```
+
+#### Lists objects in the connected S3 bucket.
+
+```python
+key_object = s3_conn.get_objects()
+```
+
+```python
+key_object = s3_conn.get_objects(only_objects=True)
+```
+
+`only_objects`: If True, returns a list of object metadata (excluding keys).
+
+```python
+key_object = s3_conn.get_objects(only_keys=True)
+```
+
+`only_keys`: If True, returns a list of object keys.

@@ -286,7 +286,7 @@ class S3Connection(AWSConnection):
             console_print(msg=f"An error occurred: {e}", color="error")
             raise
 
-        return response['url'], response['fields']
+        return json.dumps(response)
 
     def presigned_get_url(self, object_name: str, expiration: int = 3600) -> str:
         """
@@ -311,4 +311,81 @@ class S3Connection(AWSConnection):
             console_print(msg=f"An error occurred: {e}", color="error")
             raise
 
+        return json.dumps(response)
+
+    def upload_object(self, file: bytes, key_name: str):
+        """
+        Uploads a file to the connected S3 bucket.
+
+        :param file: Bytes of the file to upload.
+        :param key_name: S3 object name (e.g., 'folder/filename.txt').
+        :return: True if the file was uploaded successfully; otherwise, raises an exception.
+        """
+        assert self.__s3_instance and self._bucket_name, "S3 connection not established. Please use s3_connect(bucket_name)."
+
+        try:
+            self.__s3_instance.put_object(Bucket=self._bucket_name, Key=key_name, Body=file)
+            console_print(msg=f"File '{key_name}' successfully uploaded to bucket '{self._bucket_name}'.")
+
+        except self.__s3_instance.exceptions.ClientError as e:
+            console_print(msg=f"Error uploading file '{key_name}': {e}", color="error")
+            raise
+    
+    def get_object(self, key_name: str):
+        """
+        Retrieves an object from the connected S3 bucket.
+
+        :param key_name: S3 object name (e.g., 'folder/filename.txt' or 'filename.txt').
+        :return: The object metadata.
+        """
+        assert self.__s3_instance and self._bucket_name, "S3 connection not established. Please use s3_connect(bucket_name)."
+
+        try:
+            key_object = self.__s3_instance.get_object(Bucket=self._bucket_name, Key=key_name)
+        except self.__s3_instance.exceptions.ClientError as e:
+            console_print(msg=f"An error occurred: {e}", color="error")
+            raise
+        return key_object
+
+    def delete_object(self, key_name: str):
+        """
+        Deletes an object from the connected S3 bucket.
+
+        :param key_name: S3 object name (e.g., 'folder/filename.txt').
+        """
+        assert self.__s3_instance and self._bucket_name, "S3 connection not established. Please use s3_connect(bucket_name)."
+
+        try:
+            self.__s3_instance.delete_object(Bucket=self._bucket_name, Key=key_name)
+            console_print(msg=f"Successfully deleted '{key_name}' from bucket '{self._bucket_name}'")
+        except self.__s3_instance.exceptions.ClientError as e:
+            console_print(msg=f"An error occurred: {e}", color="error")
+            raise
+        return 
+    
+    def get_objects(self, only_objects: bool = False, only_keys: bool = False) -> Union[List[Dict], List[str], Dict]:
+        """
+        Lists objects in the connected S3 bucket.
+
+        :param only_objects: If True, returns a list of object metadata (excluding keys).
+        :param only_keys: If True, returns a list of object keys.
+        :return: A list of object metadata, keys, or the full response based on the parameters.
+        """
+        assert self.__s3_instance and self._bucket_name, "S3 connection not established. Please use s3_connect(bucket_name)."
+
+        # Fetch the list of objects
+        response = self.__s3_instance.list_objects_v2(Bucket=self._bucket_name)
+
+        # Handle case where there are no objects
+        if 'Contents' not in response:
+            return []
+
+        # Return only objects or only keys based on parameters
+        if only_objects:
+            return [obj for obj in response['Contents']]
+        
+        if only_keys:
+            return [obj['Key'] for obj in response['Contents']]
+        
+        # Return full response if neither only_objects nor only_keys is specified
         return response
