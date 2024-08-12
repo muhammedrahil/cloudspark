@@ -1,6 +1,6 @@
 # How to Use in Javascript
 
-### Upload File to S3 Bucket
+## Upload File to S3 Bucket
 
 ## HTML Example
 
