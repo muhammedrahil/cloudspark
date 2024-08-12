@@ -1,11 +1,14 @@
 import json
 import boto3
 from typing import Optional, Dict, List, Union
-from utils import console_print
+from utils import console_print  # Consider renaming to something like `log_message` if using logging
 from aws_connect import AWSConnection
 
 class S3Connection(AWSConnection):
-    """A class to manage AWS S3 connection and operations."""
+    """
+    A class to manage AWS S3 connection and operations, such as bucket creation, CORS management, 
+    policy setting, and presigned URL generation.
+    """
 
     __s3_instance: Optional[boto3.client] = None
     _bucket_name: Optional[str] = None
@@ -14,51 +17,54 @@ class S3Connection(AWSConnection):
         """
         Initializes the S3 connection using the provided AWS credentials.
 
-        :param access_key: AWS access key.
-        :param secret_access_key: AWS secret access key.
-        :param region_name: AWS region name (e.g., 'us-west-2').
+        :param access_key: AWS Access Key ID.
+        :param secret_access_key: AWS Secret Access Key.
+        :param region_name: AWS region name (e.g., 'us-east-1').
         """
         super().__init__(access_key=access_key, 
                          secret_access_key=secret_access_key, 
                          region_name=region_name)
 
-    def s3_connect(self, bucket_name: Optional[str] = None) -> boto3.client:
+    def connect(self, bucket_name: Optional[str] = None) -> boto3.client:
         """
         Establishes and returns an S3 client instance using the provided AWS credentials.
 
-        :param bucket_name: Optional name of the S3 bucket to connect to.
-        :return: A boto3 S3 client instance.
+        :param bucket_name: Name of the S3 bucket to connect to. If provided, sets the internal bucket name.
+        :return: The connected S3 client instance.
         """
         if not self._session:
-            self.session_connect()
+            self.session_connect()  # Ensure the session is initialized
 
         if self.__s3_instance is None:
-            self.__s3_instance = self._session.client('s3')
+            self.__s3_instance = self._session.client('s3')  # Create an S3 client instance
         
         if bucket_name:
-            self._bucket_name = bucket_name
+            self._bucket_name = bucket_name  # Set the internal bucket name
         
         return self.__s3_instance
 
-    def get_s3_instance(self) -> boto3.client:
+    def get_instance(self) -> boto3.client:
         """
         Returns the current S3 client instance.
 
-        :return: A boto3 S3 client instance if initialized; otherwise, raises an assertion error.
+        :return: The current S3 client instance.
+        :raises AssertionError: If the S3 connection is not established.
         """
-        assert self.__s3_instance, "S3 connection not established. Please use s3_connect(bucket_name)."
+        assert self.__s3_instance, "S3 connection not established. Please use connect(bucket_name)."
         return self.__s3_instance
 
     def create_s3bucket(self, bucket_name: str) -> boto3.client:
         """
         Creates an S3 bucket using the provided bucket name. If the bucket already exists, it notifies the user.
 
-        :param bucket_name: The name of the bucket to create.
-        :return: The S3 client instance.
+        :param bucket_name: Name of the bucket to create.
+        :return: The S3 client instance connected to the created bucket.
+        :raises ClientError: If an error occurs during bucket creation.
         """
-        assert self.__s3_instance, "S3 connection not established. Please use s3_connect()."
+        assert self.__s3_instance, "S3 connection not established. Please use connect()."
 
         try:
+            # Check if the bucket already exists
             self.__s3_instance.head_bucket(Bucket=bucket_name)
             console_print(msg=f"Bucket '{bucket_name}' already exists.", color="error")
         except self.__s3_instance.exceptions.ClientError as e:
@@ -78,16 +84,19 @@ class S3Connection(AWSConnection):
                 console_print(msg=f"An error occurred: {e}", color="error")
                 raise
 
-        return self.s3_connect(bucket_name)
+        return self.connect(bucket_name)
 
     def set_bucket_cors(self, CORSRules: Union[List[Dict], None] = None) -> boto3.client:
         """
-        Sets the CORS configuration for the connected S3 bucket.
+        Sets the CORS (Cross-Origin Resource Sharing) configuration for the connected S3 bucket.
 
-        :param CORSRules: Optional CORS configuration. If not provided, a default configuration is applied.
-        :return: The S3 client instance.
+        :param CORSRules: A list of dictionaries containing CORS rules. 
+                          If None, a default CORS rule allowing all origins and methods is applied.
+        :return: The S3 client instance connected to the bucket with the new CORS configuration.
+        :raises AssertionError: If the S3 connection or bucket name is not set.
+        :raises ClientError: If an error occurs while setting the CORS configuration.
         """
-        assert self.__s3_instance and self._bucket_name, "S3 connection not established. Please use s3_connect(bucket_name)."
+        assert self.__s3_instance and self._bucket_name, "S3 connection not established. Please use connect(bucket_name)."
 
         default_CORSRules = [
             {
@@ -112,9 +121,11 @@ class S3Connection(AWSConnection):
         """
         Retrieves the CORS configuration for the connected S3 bucket.
 
-        :return: A dictionary containing the CORS configuration.
+        :return: A dictionary containing the current CORS configuration for the bucket.
+        :raises AssertionError: If the S3 connection or bucket name is not set.
+        :raises ClientError: If an error occurs while retrieving the CORS configuration.
         """
-        assert self.__s3_instance and self._bucket_name, "S3 connection not established. Please use s3_connect(bucket_name)."
+        assert self.__s3_instance and self._bucket_name, "S3 connection not established. Please use connect(bucket_name)."
 
         try:
             response = self.__s3_instance.get_bucket_cors(Bucket=self._bucket_name)
@@ -127,8 +138,11 @@ class S3Connection(AWSConnection):
     def delete_bucket_cors(self):
         """
         Deletes the CORS configuration from the connected S3 bucket.
+
+        :raises AssertionError: If the S3 connection or bucket name is not set.
+        :raises ClientError: If an error occurs while deleting the CORS configuration.
         """
-        assert self.__s3_instance and self._bucket_name, "S3 connection not established. Please use s3_connect(bucket_name)."
+        assert self.__s3_instance and self._bucket_name, "S3 connection not established. Please use connect(bucket_name)."
         try:
             self.__s3_instance.delete_bucket_cors(Bucket=self._bucket_name)
         except self.__s3_instance.exceptions.ClientError as e:
@@ -140,9 +154,12 @@ class S3Connection(AWSConnection):
         """
         Sets or updates the bucket policy for the connected S3 bucket.
 
-        :param bucket_policy: Optional policy in JSON format. If not provided, a default policy is applied.
+        :param bucket_policy: A JSON string or dictionary representing the bucket policy. 
+                              If None, a default public read policy is applied.
+        :raises AssertionError: If the S3 connection or bucket name is not set.
+        :raises ClientError: If an error occurs while setting the bucket policy.
         """
-        assert self.__s3_instance and self._bucket_name, "S3 connection not established. Please use s3_connect(bucket_name)."
+        assert self.__s3_instance and self._bucket_name, "S3 connection not established. Please use connect(bucket_name)."
 
         default_bucket_policy = {
             "Version": "2012-10-17",
@@ -179,8 +196,11 @@ class S3Connection(AWSConnection):
     def delete_bucket_policy(self):
         """
         Deletes the bucket policy from the connected S3 bucket.
+
+        :raises AssertionError: If the S3 connection or bucket name is not set.
+        :raises ClientError: If an error occurs while deleting the bucket policy.
         """
-        assert self.__s3_instance and self._bucket_name, "S3 connection not established. Please use s3_connect(bucket_name)."
+        assert self.__s3_instance and self._bucket_name, "S3 connection not established. Please use connect(bucket_name)."
         try:
             self.__s3_instance.delete_bucket_policy(Bucket=self._bucket_name)
         except self.__s3_instance.exceptions.ClientError as e:
@@ -192,113 +212,97 @@ class S3Connection(AWSConnection):
         """
         Lists inline policies for a specific IAM user.
 
-        :param UserName: The IAM username.
-        :return: A dictionary containing the list of inline policies.
+        :param UserName: The name of the IAM user whose policies are to be listed.
+        :return: A dictionary containing the list of user policies.
         """
         iam_client = self._session.client('iam')
         response = iam_client.list_user_policies(UserName=UserName)
         return response
 
-    def s3_public_access(self, block: bool = True) -> boto3.client:
+    def public_access(self, block: bool = True) -> boto3.client:
         """
         Blocks or allows public access to the connected S3 bucket.
 
-        :param block: If True, blocks public access; otherwise, allows public access.
-        :return: The S3 client instance.
+        :param block: If True, blocks public access. If False, allows public access.
+        :return: The S3 client instance connected to the bucket.
+        :raises AssertionError: If the S3 connection or bucket name is not set.
+        :raises ClientError: If an error occurs while updating the public access configuration.
         """
-        assert self.__s3_instance and self._bucket_name, "S3 connection not established. Please use s3_connect(bucket_name)."
+        assert self.__s3_instance and self._bucket_name, "S3 connection not established. Please use connect(bucket_name)."
+
+        block_settings = {
+            'BlockPublicAcls': block,
+            'IgnorePublicAcls': block,
+            'BlockPublicPolicy': block,
+            'RestrictPublicBuckets': block
+        }
 
         try:
             self.__s3_instance.put_public_access_block(
                 Bucket=self._bucket_name,
-                PublicAccessBlockConfiguration={
-                    'BlockPublicAcls': block,
-                    'IgnorePublicAcls': block,
-                    'BlockPublicPolicy': block,
-                    'RestrictPublicBuckets': block
-                }
+                PublicAccessBlockConfiguration=block_settings
             )
-            _msg = "blocked" if block else "allowed"
-            console_print(msg=f"Public access {_msg} for bucket: {self._bucket_name}")
+            status = "blocked" if block else "allowed"
+            console_print(msg=f"Public access {status} for bucket '{self._bucket_name}'.")
         except self.__s3_instance.exceptions.ClientError as e:
-            console_print(msg=f"Error in setting public access: {e}", color="error")
+            console_print(msg=f"An error occurred: {e}", color="error")
             raise
 
         return self.__s3_instance
-    
-    def upload_object(self, file: bytes, key_name: str):
-        """
-        Uploads a file to the connected S3 bucket.
 
-        :param file: Bytes of the file to upload.
-        :param key_name: S3 object name (e.g., 'folder/filename.txt').
-        :return: True if the file was uploaded successfully; otherwise, raises an exception.
+    def presigned_create_url(self, object_name: str, params: Optional[Dict] = None,
+                             fields: Optional[Dict] = None, conditions: Optional[Dict] = None,
+                             expiration: int = 3600) -> str:
         """
-        assert self.__s3_instance and self._bucket_name, "S3 connection not established. Please use s3_connect(bucket_name)."
+        Generates a presigned URL for creating an object in the S3 bucket.
+
+        :param object_name: The name of the object to be created in the S3 bucket.
+        :param params: (Optional) Additional request parameters to include in the presigned URL.
+        :param fields: (Optional) Pre-filled form fields to include in the presigned URL.
+        :param conditions: (Optional) Conditions to include in the presigned URL.
+        :param expiration: (Optional) Time in seconds for which the presigned URL should remain valid.
+                           Default is 3600 seconds (1 hour).
+        :return: A tuple containing the presigned URL and form fields.
+        :raises AssertionError: If the S3 connection or bucket name is not set.
+        :raises ClientError: If an error occurs while generating the presigned URL.
+        """
+        assert self.__s3_instance and self._bucket_name, "S3 connection not established. Please use connect(bucket_name)."
 
         try:
-            self.__s3_instance.put_object(Bucket=self._bucket_name, Key=key_name, Body=file)
-            console_print(msg=f"File '{key_name}' successfully uploaded to bucket '{self._bucket_name}'.")
-
-        except self.__s3_instance.exceptions.ClientError as e:
-            console_print(msg=f"Error uploading file '{key_name}': {e}", color="error")
-            raise
-    
-    def get_object(self, key_name: str):
-        """
-        Retrieves an object from the connected S3 bucket.
-
-        :param key_name: S3 object name (e.g., 'folder/filename.txt' or 'filename.txt').
-        :return: The object metadata.
-        """
-        assert self.__s3_instance and self._bucket_name, "S3 connection not established. Please use s3_connect(bucket_name)."
-
-        try:
-            key_object = self.__s3_instance.get_object(Bucket=self._bucket_name, Key=key_name)
+            response = self.__s3_instance.generate_presigned_post(
+                Bucket=self._bucket_name,
+                Key=object_name,
+                Fields=fields if fields else {},
+                Conditions=conditions if conditions else [],
+                ExpiresIn=expiration
+            )
         except self.__s3_instance.exceptions.ClientError as e:
             console_print(msg=f"An error occurred: {e}", color="error")
             raise
-        return key_object
 
-    def delete_object(self, key_name: str):
-        """
-        Deletes an object from the connected S3 bucket.
+        return response['url'], response['fields']
 
-        :param key_name: S3 object name (e.g., 'folder/filename.txt').
+    def presigned_get_url(self, object_name: str, expiration: int = 3600) -> str:
         """
-        assert self.__s3_instance and self._bucket_name, "S3 connection not established. Please use s3_connect(bucket_name)."
+        Generates a presigned URL for accessing an object in the S3 bucket.
+
+        :param object_name: The name of the object to be accessed in the S3 bucket.
+        :param expiration: (Optional) Time in seconds for which the presigned URL should remain valid.
+                           Default is 3600 seconds (1 hour).
+        :return: A presigned URL string.
+        :raises AssertionError: If the S3 connection or bucket name is not set.
+        :raises ClientError: If an error occurs while generating the presigned URL.
+        """
+        assert self.__s3_instance and self._bucket_name, "S3 connection not established. Please use connect(bucket_name)."
 
         try:
-            self.__s3_instance.delete_object(Bucket=self._bucket_name, Key=key_name)
-            console_print(msg=f"Successfully deleted '{key_name}' from bucket '{self._bucket_name}'")
+            response = self.__s3_instance.generate_presigned_url(
+                'get_object',
+                Params={'Bucket': self._bucket_name, 'Key': object_name},
+                ExpiresIn=expiration
+            )
         except self.__s3_instance.exceptions.ClientError as e:
             console_print(msg=f"An error occurred: {e}", color="error")
             raise
-        return 
-    
-    def get_s3_bucket_objects(self, only_objects: bool = False, only_keys: bool = False) -> Union[List[Dict], List[str], Dict]:
-        """
-        Lists objects in the connected S3 bucket.
 
-        :param only_objects: If True, returns a list of object metadata (excluding keys).
-        :param only_keys: If True, returns a list of object keys.
-        :return: A list of object metadata, keys, or the full response based on the parameters.
-        """
-        assert self.__s3_instance and self._bucket_name, "S3 connection not established. Please use s3_connect(bucket_name)."
-
-        # Fetch the list of objects
-        response = self.__s3_instance.list_objects_v2(Bucket=self._bucket_name)
-
-        # Handle case where there are no objects
-        if 'Contents' not in response:
-            return []
-
-        # Return only objects or only keys based on parameters
-        if only_objects:
-            return [obj for obj in response['Contents']]
-        
-        if only_keys:
-            return [obj['Key'] for obj in response['Contents']]
-        
-        # Return full response if neither only_objects nor only_keys is specified
         return response
