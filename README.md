@@ -114,6 +114,12 @@ policy = {
 s3_conn.set_bucket_policy(bucket_policy=policy)
 ```
 
+#### Retrieves Bucket Policy
+Retrieves the bucket policy for the connected S3 bucket
+```python
+policy = s3_conn.get_bucket_policy()
+```
+
 #### Delete Bucket Policy
 Delete the bucket policy from the connected bucket
 ```python
@@ -154,11 +160,25 @@ responce = s3_conn.presigned_create_url(
 
 `expiration` : (Optional) Time in seconds for which the presigned URL should remain valid. Default is 3600 seconds (1 hour).
 
-#### Generate Presigned Get URL
-Generate a presigned URL for accessing an object
+##### Output
 
 ```python
-responce = s3_conn.presigned_get_url(object_name='object_name', expiration=3600)
+
+{'url': 'https://{{bucketname}}.s3.amazonaws.com/', 'fields': {'key': '{{object_name}}.mp4', 'x-amz-algorithm': 'AWS4-HMAC-SHA256', 'x-amz-credential': 'ASIASXFYXRCWS2V7P3US/20240731/ap-south-1/s3/aws4_request', 'x-amz-date': '20240731T145524Z', 'x-amz-security-token': 'IQoJb3JpZ2luX2VjEHcaCmFwLXNvdXRoLTEiRzBFAiBNpppLXjpopHVEyPJuNu+zgxIo4u9bWLP5ILcL75CPCQIhAOOHx0OACSBdLzc41Vn2NUzKTvfQHfflqcBuT10tb7RCKocDCGAQABoMMTg3MjE4NDk1NjYxIgx59bFXo014RO8gFQIq5AL7P5gQrNsOgOSPMb8p+XNpoVr32aqynjQtEMMoKecn4C1blpwYVAkUNnMhX/XspXeHwqUZBvwhjIHFe4+rMtznM46O2albdNPOImyp5HwIZmG74xGWqVoOG/1f16PWXJf4n/MgZvGDJgKXKCHC3kUsOnzhHfFJwgPmpaizd6ippEIOkz0bs86lHXqOnmt1HjnzqWij09p8WMto0bLvQxm+Thn+iItqnK+g0YbSEmO9kREig5u4HkUxJ+WkayO0ndXKUlPb85cEih8tbtWSBTEOKi08NppUL4LIR7NF+mUWnzeozohoZXI1FkANvwSpdnOO/4b8/HO16lpXlBi4Hh/V5lTb90aO1rMChXoGT6N+cuEJ/NyTBU/FqsOFahXEgA+DI8FE/zifwse7b8ipMqjchGiSCESgaTYtglE67VB2dQC05PFyf4xI/hS82NHLqPh/SRv2atTbzOJnBFKV3Q9FchSuCjDXnKm1BjqeAer1dmHtWmIJW4HdtR3JzVt2ChohWlG7U8EYgmqbq/EDfp5X/5N4oYOh2YTywjYnlSFTbhPF1wSK9atuYUZ2VPlvaI+c5fFtE1eOMe1GB1Rps959uMaOTn6o2zN+GqqeKo3bYF5KqoSEQT5hGgVgLjM+kZXh8o1O4958io8WHZVDXJniyip5yMXRILacrvlp4d2X4pSfCXBOaEpMWtD8', 'policy': 'eyJleHBpcmF0aW9uIjogIjIwMjQtMDctMzFUMTY6MTI6MDRaIiwgImNvbmRpdGlvbnMiOiBbeyJidWNrZXQiOiAibXlwYXRyaW90YXBwYnVja2V0In0sIHsia2V5IjogIjMxOTUzOTQtdWhkXzM4NDBfMjE2MF8yNWZwcy5tcDQifSwgeyJ4LWFtei1hbGdvcml0aG0iOiAiQVdTNC1ITUFDLVNIQTI1NiJ9LCB7IngtYW16LWNyZWRlbnRpYWwiOiAiQVNJQVNYRllYUkNXUzJWN1AzVVMvMjAyNDA3MzEvYXAtc291dGgtMS9zMy9hd3M0X3JlcXVlc3QifSwgeyJ4LWFtei1kYXRlIjogIjIwMjQwNzMxVDE0NTUyNFoifSwgeyJ4LWFtei1zZWN1cml0eS10b2tlbiI6ICJJUW9KYjNKcFoybHVYMlZqRUhjYUNtRndMWE52ZFhSb0xURWlSekJGQWlCTnBwcExYanBvcEhWRXlQSnVOdSt6Z3hJbzR1OWJXTFA1SUxjTDc1Q1BDUUloQU9PSHgwT0FDU0JkTHpjNDFWbjJOVXpLVHZmUUhmZmxxY0J1VDEwdGI3UkNLb2NEQ0dBUUFCb01NVGczTWpFNE5EazFOall4SWd4NTliRlhvMDE0Uk84Z0ZRSXE1QUw3UDVnUXJOc09nT1NQTWI4cCtYTnBvVnIzMmFxeW5qUXRFTU1vS2VjbjRDMWJscHdZVkFrVU5uTWhYL1hzcFhlSHdxVVpCdndoaklIRmU0K3JNdHpuTTQ2TzJhbGJkTlBPSW15cDVId0labUc3NHhHV3FWb09HLzFmMTZQV1hKZjRuL01nWnZHREpnS1hLQ0hDM2tVc09uemhIZkZKd2dQbXBhaXpkNmlwcEVJT2t6MGJzODZsSFhxT25tdDFIam56cVdpajA5cDhXTXRvMGJMdlF4bStUaG4raUl0cW5LK2cwWWJTRW1POWtSRWlnNXU0SGtVeEorV2theU8wbmRYS1VsUGI4NWNFaWg4dGJ0V1NCVEVPS2kwOE5wcFVMNExJUjdORittVVduemVvem9ob1pYSTFGa0FOdndTcGRuT08vNGI4L0hPMTZscFhsQmk0SGgvVjVsVGI5MGFPMXJNQ2hYb0dUNk4rY3VFSi9OeVRCVS9GcXNPRmFoWEVnQStESThGRS96aWZ3c2U3YjhpcE1xamNoR2lTQ0VTZ2FUWXRnbEU2N1ZCMmRRQzA1UEZ5ZjR4SS9oUzgyTkhMcVBoL1NSdjJhdFRiek9KbkJGS1YzUTlGY2hTdUNqRFhuS20xQmpxZUFlcjFkbUh0V21JSlc0SGR0UjNKelZ0MkNob2hXbEc3VThFWWdtcWJxL0VEZnA1WC81TjRvWU9oMllUeXdqWW5sU0ZUYmhQRjF3U0s5YXR1WVVaMlZQbHZhSStjNWZGdEUxZU9NZTFHQjFScHM5NTl1TWFPVG42bzJ6TitHcXFlS28zYllGNUtxb1NFUVQ1aEdnVmdMak0ra1pYaDhvMU80OTU4aW84V0haVkRYSm5peWlwNXlNWFJJTGFjcnZscDRkMlg0cFNmQ1hCT2FFcE1XdEQ4In1dfQ==', 'x-amz-signature': '878f7196136da54e345460f49b636ef5ea1ca54fd5615f86e25f77ff1a20d755'}}
+
+```
+
+#### Generate Presigned Delete URL
+Generate a presigned URL for Delete an object
+
+```python
+responce = s3_conn.presigned_delete_url(object_name='object_name', expiration=3600)
+```
+
+##### Output
+
+```python
+"https://{{bucket_name}}.s3.amazonaws.com/hdfwf.png?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=AKIASXFYXRCWTXZSH6N3%2F20240812%2Fap-south-1%2Fs3%2Faws4_request&X-Amz-Date=20240812T151744Z&X-Amz-Expires=4600&X-Amz-SignedHeaders=host&X-Amz-Signature=a680ee638e9cc27f2ec21cae36ad807cffb2fc74e1e91fa55709f25f324d1e22"
 ```
 
 #### Uploads a file to the connected S3 bucket.

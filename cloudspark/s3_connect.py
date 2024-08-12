@@ -207,6 +207,21 @@ class S3Connection(AWSConnection):
             console_print(msg=f"An error occurred: {e}", color="error")
             raise
         return self.__s3_instance
+    
+    def get_bucket_policy(self):
+        """
+        Retrieves the bucket policy for the connected S3 bucket
+
+        :raises AssertionError: If the S3 connection or bucket name is not set.
+        :raises ClientError: If an error occurs while deleting the bucket policy.
+        """
+        assert self.__s3_instance and self._bucket_name, "S3 connection not established. Please use connect(bucket_name)."
+        try:
+            response = self.__s3_instance.get_bucket_policy(Bucket=self._bucket_name)
+        except self.__s3_instance.exceptions.ClientError as e:
+            console_print(msg=f"An error occurred: {e}", color="error")
+            raise
+        return response
 
     def list_user_policies(self, UserName: str) -> Dict:
         """
@@ -288,9 +303,9 @@ class S3Connection(AWSConnection):
 
         return json.dumps(response)
 
-    def presigned_get_url(self, object_name: str, expiration: int = 3600) -> str:
+    def presigned_delete_url(self, object_name: str, expiration: int = 3600) -> str:
         """
-        Generates a presigned URL for accessing an object in the S3 bucket.
+        Generates a presigned URL for delete an object in the S3 bucket.
 
         :param object_name: The name of the object to be accessed in the S3 bucket.
         :param expiration: (Optional) Time in seconds for which the presigned URL should remain valid.
@@ -303,7 +318,7 @@ class S3Connection(AWSConnection):
 
         try:
             response = self.__s3_instance.generate_presigned_url(
-                'get_object',
+                'delete_object',
                 Params={'Bucket': self._bucket_name, 'Key': object_name},
                 ExpiresIn=expiration
             )

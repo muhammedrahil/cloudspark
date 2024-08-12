@@ -46,6 +46,48 @@ Here is an example of an HTML form that includes file upload functionality with 
 </html>
 ```
 
+```python
+from cloudspark import S3Connection
+from PROJECT import settings
+
+# Django Url: https://DOMAIN_URL.com/packaging/presigned_url/
+
+path('packaging/presigned_url/',packaging_presigned_url, name='packaging_presigned_url'),
+
+def packaging_presigned_url(request):
+    if request.method == 'GET':
+        method = request.GET.get('method')
+        file_name = request.GET.get('file_name')
+        
+        if not method:
+            return JsonResponse({"msg":"method is required"},status=400)
+        
+        if not file_name:
+            return JsonResponse({"msg":"file_name is required"},status=400)
+        
+        response = get_presigned_url_from_s3(method, file_name)
+        return JsonResponse({"data" : response},status=200)
+
+
+
+def get_presigned_url_from_s3(method, filename):
+    responce = None
+    s3_conn = S3Connection(access_key=settings.AWS_ACCESS_KEY_ID,
+                    secret_access_key=settings.AWS_SECRET_ACCESS_KEY,
+                    region_name=settings.AWS_REGION_NAME)
+    s3_conn.connect(bucket_name=settings.AWS_STORAGE_BUCKET_NAME)
+
+    if method == 'post':
+        responce = s3_conn.presigned_create_url(
+            object_name=filename,
+            expiration=4600
+        )
+    if method == 'delete':
+        responce = s3_conn.presigned_get_url(object_name=filename, expiration=4600)
+    return responce
+
+```
+
 ## upload file to s3 javascript Example
 
 
@@ -55,8 +97,8 @@ async function getPresignedUrl(params) {
     try {
         params = new URLSearchParams(params)
         let url = `${BACKEND_API}${params.toString()}`
-        const response = await axios.post(url);
-        const data = response.data
+        const response = await axios.get(url);
+        const data = JSON.parse(response.data.data)
         return [response.status , data.url, data.fields, null];
     } catch (error) {
         return [400 , null, null, error]
@@ -129,8 +171,9 @@ async function getPresignedDeleteUrl(params) {
     try {
         params = new URLSearchParams(params)
         let url = `${BACKENDAPI}?${params.toString()}`
-        const response = await axios.post(url);
-        return [response.status , response.data];
+        const response = await axios.get(url);
+        const data = JSON.parse(response.data.data)
+        return [response.status , response.data.data];
     } catch (error) {
         console.log(error);
         return [400 ,null]
