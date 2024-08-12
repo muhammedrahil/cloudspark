@@ -251,7 +251,7 @@ class S3Connection(AWSConnection):
         return self.__s3_instance
 
     def presigned_create_url(self, object_name: str, params: Optional[Dict] = None,
-                             fields: Optional[Dict] = None, conditions: Optional[Dict] = None,
+                             fields: Optional[Dict] = {}, conditions: Optional[Dict] = [],
                              expiration: int = 3600) -> str:
         """
         Generates a presigned URL for creating an object in the S3 bucket.
@@ -269,11 +269,17 @@ class S3Connection(AWSConnection):
         assert self.__s3_instance and self._bucket_name, "S3 connection not established. Please use connect(bucket_name)."
 
         try:
+            if params:
+                for key,value in params.items():
+                    if key != 'file_name':
+                        fields[f'x-amz-meta-{key}'] = value
+                        conditions.append({f'x-amz-meta-{key}':value})
+                        
             response = self.__s3_instance.generate_presigned_post(
                 Bucket=self._bucket_name,
                 Key=object_name,
-                Fields=fields if fields else {},
-                Conditions=conditions if conditions else [],
+                Fields=fields,
+                Conditions=conditions,
                 ExpiresIn=expiration
             )
         except self.__s3_instance.exceptions.ClientError as e:
