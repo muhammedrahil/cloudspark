@@ -1,8 +1,8 @@
 import json
 import boto3
 from typing import Optional, Dict, List, Union
-from utils import console_print  # Consider renaming to something like `log_message` if using logging
-from aws_connect import AWSConnection
+from cloudspark.utils import console_print  # Consider renaming to something like `log_message` if using logging
+from cloudspark.aws_connect import AWSConnection
 
 class S3Connection(AWSConnection):
     """

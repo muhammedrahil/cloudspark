@@ -136,7 +136,7 @@ s3_conn.public_access(block=False) # Allow public access
 Generate a presigned URL for creating an object
 
 ```python
-url, fields = s3_conn.presigned_create_url(
+responce = s3_conn.presigned_create_url(
     object_name='my-object',
     params={'key': 'value'},
     fields={'field': 'value'},
@@ -158,5 +158,5 @@ url, fields = s3_conn.presigned_create_url(
 Generate a presigned URL for accessing an object
 
 ```python
-url = s3_conn.presigned_get_url(object_name='my-object', expiration=3600)
+responce = s3_conn.presigned_get_url(object_name='my-object', expiration=3600)
 ```
