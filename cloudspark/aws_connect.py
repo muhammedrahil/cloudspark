@@ -4,9 +4,7 @@ from typing import Optional
 class AWSConnection:
     """A class to manage an AWS connection."""
 
-    _session: Optional[boto3.Session] = None
-
-    def __init__(self, access_key: str, secret_access_key: str, region_name: str):
+    def __init__(self, access_key: str, secret_access_key: str, region_name: str, session_token : str = None):
         """
         Initializes the AWSConnection instance with AWS credentials and region information.
 
@@ -14,9 +12,12 @@ class AWSConnection:
         :param secret_access_key: AWS Secret Access Key.
         :param region_name: AWS region name (e.g., 'us-west-2').
         """
+        self._session: Optional[boto3.Session] = None
+
         self._access_key = access_key
         self._secret_access_key = secret_access_key
         self._region_name = region_name
+        self._session_token = session_token
 
     def session_connect(self) -> boto3.Session:
         """
@@ -28,6 +29,7 @@ class AWSConnection:
             self._session = boto3.Session(
                 aws_access_key_id=self._access_key,
                 aws_secret_access_key=self._secret_access_key,
+                aws_session_token=self._session_token,
                 region_name=self._region_name
             )
         return self._session

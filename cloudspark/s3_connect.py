@@ -1,6 +1,6 @@
 import json
 import boto3
-from typing import Optional, Dict, List, Union
+from typing import Optional, Dict, List, Union, Tuple
 from cloudspark.utils import console_print  # Consider renaming to something like `log_message` if using logging
 from cloudspark.aws_connect import AWSConnection
 
@@ -13,7 +13,7 @@ class S3Connection(AWSConnection):
     __s3_instance: Optional[boto3.client] = None
     _bucket_name: Optional[str] = None
 
-    def __init__(self, access_key: str, secret_access_key: str, region_name: str):
+    def __init__(self, access_key: str, secret_access_key: str, region_name: str , DurationSeconds : int = 3600):
         """
         Initializes the S3 connection using the provided AWS credentials.
 
@@ -21,9 +21,13 @@ class S3Connection(AWSConnection):
         :param secret_access_key: AWS Secret Access Key.
         :param region_name: AWS region name (e.g., 'us-east-1').
         """
-        super().__init__(access_key=access_key, 
-                         secret_access_key=secret_access_key, 
-                         region_name=region_name)
+        AccessKeyId ,SecretAccessKey, SessionToken = self.get_sts_token(AccessKey=access_key, 
+                                                                        SecretKey=secret_access_key,
+                                                                        DurationSeconds=DurationSeconds)
+        super().__init__(access_key = AccessKeyId, 
+                         secret_access_key = SecretAccessKey, 
+                         region_name = region_name,
+                         session_token = SessionToken)
 
     def connect(self, bucket_name: Optional[str] = None) -> boto3.client:
         """
@@ -230,6 +234,8 @@ class S3Connection(AWSConnection):
         :param UserName: The name of the IAM user whose policies are to be listed.
         :return: A dictionary containing the list of user policies.
         """
+        assert self._session, "S3 connection not established. Please use connect()."
+
         iam_client = self._session.client('iam')
         response = iam_client.list_user_policies(UserName=UserName)
         return response
@@ -264,6 +270,38 @@ class S3Connection(AWSConnection):
             raise
 
         return self.__s3_instance
+
+    def get_sts_token(self, AccessKey, SecretKey, DurationSeconds : int = 3600) -> Tuple[str, str, str]:
+        """
+        ## Retrieves AWS STS session tokens using the provided credentials.
+        AWS Security Token Service (AWS STS) is available as a global service, and all AWS STS requests go to a single endpoint at https://sts.amazonaws.com.
+        AWS recommends using Regional AWS STS endpoints instead of the global endpoint to reduce latency, build in redundancy, and increase session token validity.
+
+        :param AccessKey: AWS Access Key ID.
+        :param SecretKey: AWS Secret Access Key.
+        :param DurationSeconds: Duration in seconds for which the session token should remain valid (default is 3600 seconds).
+        :return: A tuple containing AccessKeyId, SecretAccessKey, and SessionToken.
+        :raises Exception: If an error occurs while retrieving the STS token.
+      
+        """
+
+        try:
+            sts_client = boto3.client('sts',
+                                    aws_access_key_id=AccessKey,
+                                    aws_secret_access_key=SecretKey
+                                    )
+            response = sts_client.get_session_token(DurationSeconds=DurationSeconds)
+            credentials = response['Credentials']
+            AccessKeyId = credentials['AccessKeyId']
+            SecretAccessKey = credentials['SecretAccessKey']
+            SessionToken = credentials['SessionToken']
+        except Exception as e:
+            console_print(msg=f"An error occurred: {e}", color="error")
+            raise
+
+        return (AccessKeyId ,SecretAccessKey, SessionToken)
+        
+        
 
     def presigned_create_url(self, object_name: str, params: Optional[Dict] = None,
                              fields: Optional[Dict] = {}, conditions: Optional[Dict] = [],
@@ -325,8 +363,7 @@ class S3Connection(AWSConnection):
         except self.__s3_instance.exceptions.ClientError as e:
             console_print(msg=f"An error occurred: {e}", color="error")
             raise
-
-        return json.dumps(response)
+        return response
 
     def upload_object(self, file: bytes, key_name: str):
         """
