@@ -287,7 +287,7 @@ key_object = s3_conn.get_objects(only_keys=True)
 
 `only_keys`: If True, returns a list of object keys.
 
-## `policy_decode` Function
+#### policy_decode Function
 
 The `policy_decode` function is designed to decode a Base64-encoded AWS S3 policy string and return it as a formatted JSON string. This is useful for inspecting and validating S3 presigned URL policies.
 
