@@ -15,8 +15,8 @@
 This repository contains several components. For more details on each component, refer to the respective README files.
 
 - [git repository](https://github.com/muhammedrahil/cloudspark)
-- [Documentation](README.md)
-- [Js-Implementation](js-implementation.md)
+- [Documentation](https://github.com/muhammedrahil/cloudspark/blob/main/README.md)
+- [Js-Implementation](https://github.com/muhammedrahil/cloudspark/blob/main/js-implementation.md)
 
 
 ## Installation
