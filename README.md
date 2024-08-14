@@ -287,6 +287,14 @@ key_object = s3_conn.get_objects(only_keys=True)
 
 `only_keys`: If True, returns a list of object keys.
 
+#### Retrieve metadata of an object
+
+The `head_object` method retrieves metadata for an object stored in an S3 bucket. This includes details such as the content type, last modified date, and content length, but does not return the object's actual data.
+
+```python
+key_object = s3_conn.head_object(key_name="object_name")
+```
+
 #### policy_decode Function
 
 The `policy_decode` function is designed to decode a Base64-encoded AWS S3 policy string and return it as a formatted JSON string. This is useful for inspecting and validating S3 presigned URL policies.

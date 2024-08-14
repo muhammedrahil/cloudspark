@@ -368,12 +368,33 @@ class S3Connection(AWSConnection):
             console_print(msg=f"An error occurred: {e}", color="error")
             raise
         return response
+    
+    def presigned_get_url(self, object_name: str, expiration: int = 3600) -> str:
+        """Generate a presigned URL to share an S3 object
+
+        :param object_name: string
+        :param expiration: Time in seconds for the presigned URL to remain valid
+        :return: Presigned URL as string. If error, returns None.
+        """
+
+        assert self.__s3_instance and self._bucket_name, "S3 connection not established. Please use connect(bucket_name)."
+
+        try:
+            response = self.__s3_instance.generate_presigned_url(
+                'get_object',
+                Params={'Bucket': self._bucket_name, 'Key': object_name},
+                ExpiresIn=expiration
+            )
+        except self.__s3_instance.exceptions.ClientError as e:
+            console_print(msg=f"An error occurred: {e}", color="error")
+            raise
+        return response
 
     def policy_decode(self, policy_encoded: str) -> Dict:
         """
         Decodes a Base64-encoded policy string and returns it as a formatted JSON string.
         :params policy_encoded: The Base64-encoded policy string that needs to be decoded.
-        
+
         :return: A dictionary representation of the policy, formatted as a JSON string with indentation.
         """
         try:
@@ -420,6 +441,22 @@ class S3Connection(AWSConnection):
             raise
         return key_object
 
+    def head_object(self, key_name: str):
+        """
+        Retrieve metadata of an object from the connected S3 bucket.
+
+        :param key_name: S3 object name (e.g., 'folder/filename.txt' or 'filename.txt').
+        :return: The object metadata.
+        """
+        assert self.__s3_instance and self._bucket_name, "S3 connection not established. Please use s3_connect(bucket_name)."
+
+        try:
+            key_object = self.__s3_instance.head_object(Bucket=self._bucket_name, Key=key_name)
+        except self.__s3_instance.exceptions.ClientError as e:
+            console_print(msg=f"An error occurred: {e}", color="error")
+            raise
+        return key_object
+    
     def delete_object(self, key_name: str):
         """
         Deletes an object from the connected S3 bucket.
