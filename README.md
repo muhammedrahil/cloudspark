@@ -113,6 +113,55 @@ policy = {
 }
 s3_conn.set_bucket_policy(bucket_policy=policy)
 ```
+#### Policy Fields Explaintion
+
+#### 1. Version
+    Key: "Version"
+    Value: "2012-10-17"
+    Explanation:
+    This specifies the version of the policy language. "2012-10-17" is the latest version and is recommended for use.
+#### 2. Id
+    Key: "Id"
+    Value: "Policy1719828879302"
+    Explanation:
+    The Id is an optional identifier for the policy. It helps in identifying the policy, especially when dealing with multiple policies. The value here is just a unique identifier that you can use to track or refer to this policy.
+#### 3. Statement
+    Key: "Statement"
+    Value: [ ... ]
+    Explanation:
+    This is an array of statements that define what actions are allowed or denied. Each statement contains specific instructions for who can perform what actions on which resources.
+    Inside the Statement Array:
+    Sid
+
+        Key: "Sid"
+            Value: "Stmt1719828876812"
+            Explanation:
+            The Sid (Statement ID) is an optional identifier for the specific statement. It helps in identifying and managing individual statements within the policy.
+            Effect
+
+        Key: "Effect"
+            Value: "Allow"
+            Explanation:
+            The Effect determines whether the statement allows or denies access. Here, "Allow" means that the actions specified in the Action field are permitted. If it were "Deny", those actions would be explicitly forbidden.
+            Principal
+
+        Key: "Principal"
+            Value: "*"
+            Explanation:
+            The Principal specifies the entity that is allowed or denied the actions. "*" means any entity (i.e., any user, role, or service) is allowed to perform the specified actions. You could also restrict this to a specific AWS account or IAM user.
+            Action
+
+        Key: "Action"
+            Value: "s3:GetObject"
+            Explanation:
+            The Action specifies what actions are allowed or denied. Here, "s3:GetObject" means that the entities specified in the Principal field are allowed to retrieve objects from the S3 bucket. "s3:GetObject" is the action used for downloading files from S3.
+            Resource
+
+        Key: "Resource"
+            Value: "arn:aws:s3:::{{bucket_name}}/*"
+            Explanation:
+            The Resource specifies the particular AWS resource that the policy applies to. Here, the resource is specified as "arn:aws:s3:::{{bucket_name}}/*", which means all objects (files) within the {{bucket_name}} S3 bucket.
+            The arn:aws:s3:::{{bucket_name}}/* is an Amazon Resource Name (ARN) that uniquely identifies the S3 bucket and all its objects. The /* at the end means that the policy applies to all objects within the {{bucket_name}} bucket.
 
 #### Retrieves Bucket Policy
 Retrieves the bucket policy for the connected S3 bucket
@@ -144,9 +193,9 @@ Generate a presigned URL for creating an object
 ```python
 responce = s3_conn.presigned_create_url(
     object_name='object_name',
-    params={'key': 'value'},
-    fields={'field': 'value'},
-    conditions=[{'condition': 'value'}],
+    params={'key': 'value'}, # Or params= None
+    fields={'field': 'value'}, # Or fields= None
+    conditions=[{'condition': 'value'}], # Or conditions= None
     expiration=3600
 )
 ```
@@ -163,8 +212,18 @@ responce = s3_conn.presigned_create_url(
 ##### Output
 
 ```python
-
-{'url': 'https://{{bucketname}}.s3.amazonaws.com/', 'fields': {'key': '{{object_name}}.mp4', 'x-amz-algorithm': 'AWS4-HMAC-SHA256', 'x-amz-credential': 'ASIASXFYXRCWS2V7P3US/20240731/ap-south-1/s3/aws4_request', 'x-amz-date': '20240731T145524Z', 'x-amz-security-token': 'IQoJb3JpZ2luX2VjEHcaCmFwLXNvdXRoLTEiRzBFAiBNpppLXjpopHVEyPJuNu+zgxIo4u9bWLP5ILcL75CPCQIhAOOHx0OACSBdLzc41Vn2NUzKTvfQHfflqcBuT10tb7RCKocDCGAQABoMMTg3MjE4NDk1NjYxIgx59bFXo014RO8gFQIq5AL7P5gQrNsOgOSPMb8p+XNpoVr32aqynjQtEMMoKecn4C1blpwYVAkUNnMhX/XspXeHwqUZBvwhjIHFe4+rMtznM46O2albdNPOImyp5HwIZmG74xGWqVoOG/1f16PWXJf4n/MgZvGDJgKXKCHC3kUsOnzhHfFJwgPmpaizd6ippEIOkz0bs86lHXqOnmt1HjnzqWij09p8WMto0bLvQxm+Thn+iItqnK+g0YbSEmO9kREig5u4HkUxJ+WkayO0ndXKUlPb85cEih8tbtWSBTEOKi08NppUL4LIR7NF+mUWnzeozohoZXI1FkANvwSpdnOO/4b8/HO16lpXlBi4Hh/V5lTb90aO1rMChXoGT6N+cuEJ/NyTBU/FqsOFahXEgA+DI8FE/zifwse7b8ipMqjchGiSCESgaTYtglE67VB2dQC05PFyf4xI/hS82NHLqPh/SRv2atTbzOJnBFKV3Q9FchSuCjDXnKm1BjqeAer1dmHtWmIJW4HdtR3JzVt2ChohWlG7U8EYgmqbq/EDfp5X/5N4oYOh2YTywjYnlSFTbhPF1wSK9atuYUZ2VPlvaI+c5fFtE1eOMe1GB1Rps959uMaOTn6o2zN+GqqeKo3bYF5KqoSEQT5hGgVgLjM+kZXh8o1O4958io8WHZVDXJniyip5yMXRILacrvlp4d2X4pSfCXBOaEpMWtD8', 'policy': 'eyJleHBpcmF0aW9uIjogIjIwMjQtMDctMzFUMTY6MTI6MDRaIiwgImNvbmRpdGlvbnMiOiBbeyJidWNrZXQiOiAibXlwYXRyaW90YXBwYnVja2V0In0sIHsia2V5IjogIjMxOTUzOTQtdWhkXzM4NDBfMjE2MF8yNWZwcy5tcDQifSwgeyJ4LWFtei1hbGdvcml0aG0iOiAiQVdTNC1ITUFDLVNIQTI1NiJ9LCB7IngtYW16LWNyZWRlbnRpYWwiOiAiQVNJQVNYRllYUkNXUzJWN1AzVVMvMjAyNDA3MzEvYXAtc291dGgtMS9zMy9hd3M0X3JlcXVlc3QifSwgeyJ4LWFtei1kYXRlIjogIjIwMjQwNzMxVDE0NTUyNFoifSwgeyJ4LWFtei1zZWN1cml0eS10b2tlbiI6ICJJUW9KYjNKcFoybHVYMlZqRUhjYUNtRndMWE52ZFhSb0xURWlSekJGQWlCTnBwcExYanBvcEhWRXlQSnVOdSt6Z3hJbzR1OWJXTFA1SUxjTDc1Q1BDUUloQU9PSHgwT0FDU0JkTHpjNDFWbjJOVXpLVHZmUUhmZmxxY0J1VDEwdGI3UkNLb2NEQ0dBUUFCb01NVGczTWpFNE5EazFOall4SWd4NTliRlhvMDE0Uk84Z0ZRSXE1QUw3UDVnUXJOc09nT1NQTWI4cCtYTnBvVnIzMmFxeW5qUXRFTU1vS2VjbjRDMWJscHdZVkFrVU5uTWhYL1hzcFhlSHdxVVpCdndoaklIRmU0K3JNdHpuTTQ2TzJhbGJkTlBPSW15cDVId0labUc3NHhHV3FWb09HLzFmMTZQV1hKZjRuL01nWnZHREpnS1hLQ0hDM2tVc09uemhIZkZKd2dQbXBhaXpkNmlwcEVJT2t6MGJzODZsSFhxT25tdDFIam56cVdpajA5cDhXTXRvMGJMdlF4bStUaG4raUl0cW5LK2cwWWJTRW1POWtSRWlnNXU0SGtVeEorV2theU8wbmRYS1VsUGI4NWNFaWg4dGJ0V1NCVEVPS2kwOE5wcFVMNExJUjdORittVVduemVvem9ob1pYSTFGa0FOdndTcGRuT08vNGI4L0hPMTZscFhsQmk0SGgvVjVsVGI5MGFPMXJNQ2hYb0dUNk4rY3VFSi9OeVRCVS9GcXNPRmFoWEVnQStESThGRS96aWZ3c2U3YjhpcE1xamNoR2lTQ0VTZ2FUWXRnbEU2N1ZCMmRRQzA1UEZ5ZjR4SS9oUzgyTkhMcVBoL1NSdjJhdFRiek9KbkJGS1YzUTlGY2hTdUNqRFhuS20xQmpxZUFlcjFkbUh0V21JSlc0SGR0UjNKelZ0MkNob2hXbEc3VThFWWdtcWJxL0VEZnA1WC81TjRvWU9oMllUeXdqWW5sU0ZUYmhQRjF3U0s5YXR1WVVaMlZQbHZhSStjNWZGdEUxZU9NZTFHQjFScHM5NTl1TWFPVG42bzJ6TitHcXFlS28zYllGNUtxb1NFUVQ1aEdnVmdMak0ra1pYaDhvMU80OTU4aW84V0haVkRYSm5peWlwNXlNWFJJTGFjcnZscDRkMlg0cFNmQ1hCT2FFcE1XdEQ4In1dfQ==', 'x-amz-signature': '878f7196136da54e345460f49b636ef5ea1ca54fd5615f86e25f77ff1a20d755'}}
+{
+  "url": "https://{{bucket_name}}.s3.amazonaws.com/",
+  "fields": {
+    "key": "{{object_name.extention}}",
+    "x-amz-algorithm": "AWS4-HMAC-SHA256",
+    "x-amz-credential": "{{access_key}}/20240814/us-east-1/s3/aws4_request",
+    "x-amz-date": "20240814T092932Z",
+    "x-amz-security-token": "{{sts_token}}",
+    "policy": "{{policy}}",
+    "x-amz-signature": "{{signature}}"
+  }
+}
 
 ```
 
@@ -178,7 +237,7 @@ responce = s3_conn.presigned_delete_url(object_name='object_name', expiration=36
 ##### Output
 
 ```python
-"https://{{bucket_name}}.s3.amazonaws.com/hdfwf.png?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=AKIASXFYXRCWTXZSH6N3%2F20240812%2Fap-south-1%2Fs3%2Faws4_request&X-Amz-Date=20240812T151744Z&X-Amz-Expires=4600&X-Amz-SignedHeaders=host&X-Amz-Signature=a680ee638e9cc27f2ec21cae36ad807cffb2fc74e1e91fa55709f25f324d1e22"
+"https://{{bucket_name}}.s3.amazonaws.com/hdfwf.png?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential={{access_key}}%2F20240812%2Fap-south-1%2Fs3%2Faws4_request&X-Amz-Date=20240812T151744Z&X-Amz-Expires=4600&X-Amz-SignedHeaders=host&X-Amz-Signature=a680ee638e9cc27f2ec21cae36ad807cffb2fc74e1e91fa55709f25f324d1e22"
 ```
 
 #### Uploads a file to the connected S3 bucket.
@@ -227,3 +286,14 @@ key_object = s3_conn.get_objects(only_keys=True)
 ```
 
 `only_keys`: If True, returns a list of object keys.
+
+## `policy_decode` Function
+
+The `policy_decode` function is designed to decode a Base64-encoded AWS S3 policy string and return it as a formatted JSON string. This is useful for inspecting and validating S3 presigned URL policies.
+
+Decodes a Base64-encoded policy string and returns it as a formatted JSON string
+```python
+
+policy_dict = s3_conn.policy_decode(policy_encoded="policy_encoded string")
+
+```

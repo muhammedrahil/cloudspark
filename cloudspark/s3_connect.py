@@ -3,6 +3,8 @@ import boto3
 from typing import Optional, Dict, List, Union, Tuple
 from cloudspark.utils import console_print  # Consider renaming to something like `log_message` if using logging
 from cloudspark.aws_connect import AWSConnection
+import base64
+from botocore.client import Config
 
 class S3Connection(AWSConnection):
     """
@@ -40,7 +42,7 @@ class S3Connection(AWSConnection):
             self.session_connect()  # Ensure the session is initialized
 
         if self.__s3_instance is None:
-            self.__s3_instance = self._session.client('s3')  # Create an S3 client instance
+            self.__s3_instance = self._session.client('s3', config = Config(signature_version='s3v4'))  # Create an S3 client instance
         
         if bucket_name:
             self._bucket_name = bucket_name  # Set the internal bucket name
@@ -301,10 +303,8 @@ class S3Connection(AWSConnection):
 
         return (AccessKeyId ,SecretAccessKey, SessionToken)
         
-        
-
     def presigned_create_url(self, object_name: str, params: Optional[Dict] = None,
-                             fields: Optional[Dict] = {}, conditions: Optional[Dict] = [],
+                             fields: Optional[Dict] = None, conditions: Optional[List[Dict]] = None,
                              expiration: int = 3600) -> str:
         """
         Generates a presigned URL for creating an object in the S3 bucket.
@@ -323,6 +323,10 @@ class S3Connection(AWSConnection):
 
         try:
             if params:
+
+                fields = fields if isinstance(fields, dict) else {}
+                conditions = conditions if isinstance(conditions, list) else []
+
                 for key,value in params.items():
                     if key != 'file_name':
                         fields[f'x-amz-meta-{key}'] = value
@@ -364,6 +368,23 @@ class S3Connection(AWSConnection):
             console_print(msg=f"An error occurred: {e}", color="error")
             raise
         return response
+
+    def policy_decode(self, policy_encoded: str) -> Dict:
+        """
+        Decodes a Base64-encoded policy string and returns it as a formatted JSON string.
+        :params policy_encoded: The Base64-encoded policy string that needs to be decoded.
+        
+        :return: A dictionary representation of the policy, formatted as a JSON string with indentation.
+        """
+        try:
+            # Decode the Base64-encoded policy string
+            policy_decoded = base64.b64decode(policy_encoded).decode()
+            # Convert the decoded JSON string into a Python dictionary
+            policy_json = json.loads(policy_decoded)
+            # Convert the dictionary back to a formatted JSON string with indentation
+        except Exception as e:
+            raise
+        return json.dumps(policy_json, indent=4)
 
     def upload_object(self, file: bytes, key_name: str):
         """
