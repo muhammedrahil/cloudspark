@@ -10,7 +10,7 @@ with codecs.open(os.path.join(here, "README.md"), encoding="utf-8") as fh:
     long_description = fh.read()
 
 # Define the version of the package
-VERSION = '1.0.12'
+VERSION = '1.0.13'
 
 # Short description of the package
 DESCRIPTION = '''CloudSpark is a powerful Python package designed to simplify the management of AWS S3 and Lambda services. Whether you're working on the frontend or backend, CloudSpark provides an intuitive interface to generate presigned URLs and handle file uploads seamlessly.'''
