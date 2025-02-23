@@ -10,10 +10,10 @@ with codecs.open(os.path.join(here, "README.md"), encoding="utf-8") as fh:
     long_description = fh.read()
 
 # Define the version of the package
-VERSION = '1.0.14'
+VERSION = '1.0.15'
 
 # Short description of the package
-DESCRIPTION = '''CloudSpark is a powerful Python package designed to simplify the management of AWS S3 and Lambda services. Whether you're working on the frontend or backend, CloudSpark provides an intuitive interface to generate presigned URLs and handle file uploads seamlessly.'''
+DESCRIPTION = '''The CloudsPark package is designed to simplify the management of AWS S3 and Lambda services. Whether you're working on the frontend or backend, CloudSpark provides an intuitive interface to generate presigned URLs and handle file uploads seamlessly.'''
 
 # Setting up the package
 setup(
@@ -34,6 +34,6 @@ setup(
         "Intended Audience :: Developers",
         "Programming Language :: Python :: 3.11",
         "Operating System :: OS Independent",
-        # "License :: OSI Approved :: MIT License",  # Add license if applicable
+        "License :: OSI Approved :: MIT License",  # Add license if applicable
     ]
 )

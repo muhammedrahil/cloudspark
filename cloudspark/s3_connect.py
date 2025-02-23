@@ -1,3 +1,4 @@
+from datetime import datetime
 import json
 import boto3
 from typing import Optional, Dict, List, Union, Tuple
@@ -12,8 +13,8 @@ class S3Connection(AWSConnection):
     policy setting, and presigned URL generation.
     """
 
-    __s3_instance: Optional[boto3.client] = None
-    _bucket_name: Optional[str] = None
+    __s3_instance: boto3.client = None
+    _bucket_name: str = None
 
     def __init__(self, access_key: str, secret_access_key: str, region_name: str , DurationSeconds : int = 3600):
         """
@@ -31,24 +32,25 @@ class S3Connection(AWSConnection):
                          region_name = region_name,
                          session_token = SessionToken)
 
-    def connect(self, bucket_name: Optional[str] = None) -> boto3.client:
+    def connect(cls, bucket_name: str = None) -> boto3.client:
         """
         Establishes and returns an S3 client instance using the provided AWS credentials.
 
         :param bucket_name: Name of the S3 bucket to connect to. If provided, sets the internal bucket name.
         :return: The connected S3 client instance.
         """
-        if not self._session:
-            self.session_connect()  # Ensure the session is initialized
+        if not cls._session:
+            cls.session_connect()  # Ensure the session is initialized
 
-        if self.__s3_instance is None:
-            self.__s3_instance = self._session.client('s3', config = Config(signature_version='s3v4'))  # Create an S3 client instance
+        if cls.__s3_instance is None:
+            cls.__s3_instance = cls._session.client('s3', config = Config(signature_version='s3v4'))  # Create an S3 client instance
         
         if bucket_name:
-            self._bucket_name = bucket_name  # Set the internal bucket name
+            cls._bucket_name = bucket_name  # Set the internal bucket name
         
-        return self.__s3_instance
+        return cls.__s3_instance
 
+    @classmethod
     def get_instance(self) -> boto3.client:
         """
         Returns the current S3 client instance.
@@ -156,29 +158,19 @@ class S3Connection(AWSConnection):
             raise
         return self.__s3_instance
 
-    def set_bucket_policy(self, bucket_policy: Optional[Union[str, Dict]] = None):
+    def set_bucket_policy(self, bucket_policy: Optional[Union[str, Dict]] = None, folder_name: str = None):
         """
         Sets or updates the bucket policy for the connected S3 bucket.
 
         :param bucket_policy: A JSON string or dictionary representing the bucket policy. 
                               If None, a default public read policy is applied.
+        :param folder_name: for add folder policy permission
         :raises AssertionError: If the S3 connection or bucket name is not set.
         :raises ClientError: If an error occurs while setting the bucket policy.
         """
         assert self.__s3_instance and self._bucket_name, "S3 connection not established. Please use connect(bucket_name)."
 
-        default_bucket_policy = {
-            "Version": "2012-10-17",
-            "Statement": [
-                {
-                    "Sid": "PublicReadGetObject",
-                    "Effect": "Allow",
-                    "Principal": "*",
-                    "Action": "s3:*",
-                    "Resource": f"arn:aws:s3:::{self._bucket_name}/*"
-                }
-            ]
-        }
+        default_bucket_policy = self.bucket_policy_statement(folder_name)
 
         if bucket_policy:
             if isinstance(bucket_policy, dict):
@@ -198,6 +190,45 @@ class S3Connection(AWSConnection):
             raise
 
         return self.__s3_instance
+    
+    def bucket_policy_statement(self, folder_name: str = None):
+        Resource = f"arn:aws:s3:::{self._bucket_name}/*"
+        
+        if folder_name:
+            try:
+                prev_bucket_policy = self.get_bucket_policy()
+                prev_policy : Dict = json.loads(prev_bucket_policy.get('Policy', '{}'))  # Handle missing policy case
+                statements : List[Dict] = prev_policy.get("Statement", [])
+                
+                if statements:  # Ensure there are existing statements
+                    prev_policy_resource = statements[0].get("Resource", Resource)
+
+                    if isinstance(prev_policy_resource, str):
+                        prev_policy_resource = [prev_policy_resource]  # Convert to list
+                    
+                    if isinstance(prev_policy_resource, list):
+                        new_resource = f"arn:aws:s3:::{self._bucket_name}/{folder_name}/*"
+                        if new_resource not in prev_policy_resource:
+                            prev_policy_resource.append(new_resource)  # Avoid duplicate entries
+                            
+                        Resource = prev_policy_resource
+            except (KeyError, json.JSONDecodeError, AttributeError) as e:
+                print(f"Error processing previous bucket policy: {e}")  # Proper error handling
+        
+        default_bucket_policy = {
+            "Version": "2012-10-17",
+            "Statement": [
+                {
+                    "Sid": "PublicReadGetObject",
+                    "Effect": "Allow",
+                    "Principal": "*",
+                    "Action": "s3:*",
+                    "Resource": Resource
+                }
+            ]
+        }
+        
+        return default_bucket_policy
 
     def delete_bucket_policy(self):
         """
@@ -214,7 +245,7 @@ class S3Connection(AWSConnection):
             raise
         return self.__s3_instance
     
-    def get_bucket_policy(self):
+    def get_bucket_policy(self) -> Dict:
         """
         Retrieves the bucket policy for the connected S3 bucket
 
@@ -303,27 +334,32 @@ class S3Connection(AWSConnection):
 
         return (AccessKeyId ,SecretAccessKey, SessionToken)
         
-    def presigned_create_url(self, object_name: str, params: Optional[Dict] = None,
+    def presigned_create_url(self, object_name: str = None, params: Optional[Dict] = None,
                              fields: Optional[Dict] = None, conditions: Optional[List[Dict]] = None,
-                             expiration: int = 3600) -> str:
+                             expiration: int = 3600) -> Dict:
         """
-        Generates a presigned URL for creating an object in the S3 bucket.
+            Generates a presigned URL for creating an object in the S3 bucket.
 
-        :param object_name: The name of the object to be created in the S3 bucket.
-        :param params: (Optional) Additional request parameters to include in the presigned URL.
-        :param fields: (Optional) Pre-filled form fields to include in the presigned URL.
-        :param conditions: (Optional) Conditions to include in the presigned URL.
-        :param expiration: (Optional) Time in seconds for which the presigned URL should remain valid.
-                           Default is 3600 seconds (1 hour).
-        :return: A tuple containing the presigned URL and form fields.
-        :raises AssertionError: If the S3 connection or bucket name is not set.
-        :raises ClientError: If an error occurs while generating the presigned URL.
+            :param object_name: The name of the object to be created in the S3 bucket.
+                                If not provided, a unique filename will be generated.
+            :param params: (Optional) A dictionary of custom metadata fields to include in the request.
+                        These will be added as `x-amz-meta-<key>` headers.
+            :param fields: (Optional) Pre-filled form fields to include in the presigned request.
+                        Typically used to specify access control, content type, etc.
+            :param conditions: (Optional) A list of conditions for the presigned request,
+                            such as size limits or allowed content types.
+            :param expiration: (Optional) Time in seconds for which the presigned URL should remain valid.
+                            Default is 3600 seconds (1 hour).
+            :return: A dictionary containing the presigned URL and required form fields.
+            :raises AssertionError: If the S3 connection or bucket name is not set.
+            :raises ClientError: If an error occurs while generating the presigned URL.
         """
         assert self.__s3_instance and self._bucket_name, "S3 connection not established. Please use connect(bucket_name)."
 
         try:
+            if not object_name:
+                object_name = f"new-object-{datetime.now().strftime('%Y%m%d%H%M%S')}"
             if params:
-
                 fields = fields if isinstance(fields, dict) else {}
                 conditions = conditions if isinstance(conditions, list) else []
 
