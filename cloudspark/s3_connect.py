@@ -32,25 +32,24 @@ class S3Connection(AWSConnection):
                          region_name = region_name,
                          session_token = SessionToken)
 
-    def connect(cls, bucket_name: str = None) -> boto3.client:
+    def connect(self, bucket_name: str = None) -> boto3.client:
         """
         Establishes and returns an S3 client instance using the provided AWS credentials.
 
         :param bucket_name: Name of the S3 bucket to connect to. If provided, sets the internal bucket name.
         :return: The connected S3 client instance.
         """
-        if not cls._session:
-            cls.session_connect()  # Ensure the session is initialized
+        if not self._session:
+            self.session_connect()  # Ensure the session is initialized
 
-        if cls.__s3_instance is None:
-            cls.__s3_instance = cls._session.client('s3', config = Config(signature_version='s3v4'))  # Create an S3 client instance
+        if self.__s3_instance is None:
+            self.__s3_instance = self._session.client('s3', config = Config(signature_version='s3v4'))  # Create an S3 client instance
         
         if bucket_name:
-            cls._bucket_name = bucket_name  # Set the internal bucket name
+            self._bucket_name = bucket_name  # Set the internal bucket name
         
-        return cls.__s3_instance
+        return self.__s3_instance
 
-    @classmethod
     def get_instance(self) -> boto3.client:
         """
         Returns the current S3 client instance.

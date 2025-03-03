@@ -18,18 +18,17 @@ class AWSConnection:
         self._region_name = region_name
         self._session_token = session_token
 
-    @classmethod
-    def session_connect(cls) -> boto3.Session:
+    def session_connect(self) -> boto3.Session:
         """
         Establishes and returns a boto3 Session instance using the provided AWS credentials.
 
         :return: A boto3 Session instance.
         """
-        if cls._session is None:
-            cls._session = boto3.Session(
-                aws_access_key_id=cls._access_key,
-                aws_secret_access_key=cls._secret_access_key,
-                aws_session_token=cls._session_token,
-                region_name=cls._region_name
+        if self._session is None:
+            self._session = boto3.Session(
+                aws_access_key_id=self._access_key,
+                aws_secret_access_key=self._secret_access_key,
+                aws_session_token=self._session_token,
+                region_name=self._region_name
             )
-        return cls._session
+        return self._session
